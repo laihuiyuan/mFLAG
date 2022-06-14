@@ -31,7 +31,7 @@ def main():
 
     model = BartForFigGeneration.from_pretrained('facebook/bart-large')
     model.resize_token_embeddings(len(tokenizer))
-    model.load_state_dict(torch.load('checkpoints/bart_multi_fig.chkpt'))
+    model.load_state_dict(torch.load('checkpoints/mFLAG-ft.chkpt'))
     model.to(device).eval()
 
     src_seq = []

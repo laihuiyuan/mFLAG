@@ -51,7 +51,7 @@ def evaluate(model, valid_loader, tokenizer, step):
 def main():
     parser = argparse.ArgumentParser('Figurative language generation')
     parser.add_argument('-seed', default=42, type=int, help='random seed')
-    parser.add_argument('-figs', nargs='+', help='the fig tags', required=True)
+    parser.add_argument('-figs', nargs='+', help='figure tags', required=True)
     parser.add_argument('-batch_size', default=32, type=int, help='batch size')
     parser.add_argument('-patience', default=5, type=int, help='early stopping')
     parser.add_argument('-dataset', default='para', type=str, help='dataset name')
@@ -71,7 +71,7 @@ def main():
         tokenizer.add_tokens('<{}>'.format(s))
     model = BartForFigGeneration.from_pretrained('facebook/bart-large')
     model.resize_token_embeddings(len(tokenizer))
-    model.load_state_dict(torch.load('checkpoints/bart_multi_pre.chkpt'))
+    model.load_state_dict(torch.load('checkpoints/mFLAG-pt.chkpt'))
     model = model.to(device).train()
 
     # load data for training
@@ -122,7 +122,7 @@ def main():
                         and step % len(train_loader) == 0)):
                 eval_loss = evaluate(model, valid_loader, tokenizer, step)
                 if avg_loss >= eval_loss:
-                    torch.save(model.state_dict(), 'checkpoints/bart_multi_fig.chkpt')
+                    torch.save(model.state_dict(), 'checkpoints/mFLAG-ft.chkpt')
                     print('[Info] The checkpoint file has been updated.')
                     avg_loss = eval_loss
                     tab = 0

@@ -50,7 +50,7 @@ def evaluate(model, valid_loader, tokenizer, step):
 def main():
     parser = argparse.ArgumentParser('Figurative Language Pre-Training')
     parser.add_argument('-seed', default=42, type=int, help='random seed')
-    parser.add_argument('-figs', nargs='+', help='the fig tags', required=True)
+    parser.add_argument('-figs', nargs='+', help='figure tags', required=True)
     parser.add_argument('-batch_size', default=32, type=int, help='batch size')
     parser.add_argument('-patience', default=5, type=int, help='early stopping')
     parser.add_argument('-dataset', default='para', type=str, help='dataset name')
@@ -73,12 +73,11 @@ def main():
     model = model.to(device).train()
 
     # load data for training
-    train_loader, valid_loader = BartIterator('pr', tokenizer, opt).loader
+    train_loader, valid_loader = BartIterator('pt', tokenizer, opt).loader
 
     optimizer = ScheduledOptim(
         torch.optim.Adam(filter(lambda x: x.requires_grad, model.parameters()),
-                         betas=(0.9, 0.98), eps=1e-09),
-        lr=opt.lr, decay_step=1000)
+                         betas=(0.9, 0.98), eps=1e-09),lr=opt.lr, decay_step=1000)
 
     tab = 0
     step = 0
@@ -117,7 +116,7 @@ def main():
                         and step % len(train_loader) == 0)):
                 eval_loss = evaluate(model, valid_loader, tokenizer, step)
                 if avg_loss >= eval_loss:
-                    torch.save(model.state_dict(), 'checkpoints/bart_multi_pre.chkpt')
+                    torch.save(model.state_dict(), 'checkpoints/mFLAG-pt.chkpt')
                     print('[Info] The checkpoint file has been updated.')
                     avg_loss = eval_loss
                     tab = 0
