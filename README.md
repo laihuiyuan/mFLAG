@@ -1,7 +1,5 @@
 # Multi-Figurative Language Generation 
 
-code coming soon.
-
 ## Overview
 
 ![](./figs/overview.png)
@@ -26,5 +24,6 @@ python train_ft.py -dataset multi-fig -figs hyperbole idiom irony metaphor simil
 
 ### Step 3: Figurative Generation
 ```bash
+# Generating idioms form hyperbolic text
 python inference.py -src_form hyperbole -tgt_form idiom
 ```
