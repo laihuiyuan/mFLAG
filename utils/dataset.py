@@ -46,31 +46,30 @@ class BartIterator(object):
         self.tokenizer = tokenizer
         self.opt = opt
 
-        self.train_src, self.train_tgt = self.read_insts('train', opt)
-        self.valid_src, self.valid_tgt = self.read_insts('valid', opt)
+        self.train_src, self.train_tgt = self.read_insts('train')
+        self.valid_src, self.valid_tgt = self.read_insts('valid')
         print('[Info] {} instances from train set'.format(len(self.train_src)))
         print('[Info] {} instances from valid set'.format(len(self.valid_src)))
 
         self.loader = self.gen_loader(self.train_src, self.train_tgt, 
                                       self.valid_src, self.valid_tgt)
 
-    def read_insts(self, mode, opt):
+    def read_insts(self, mode):
         """
         Read instances from input file
         Args:
             mode (str): 'train' or 'valid'.
-            opt: it contains the information of transfer direction.
         Returns:
             src_seq: list of the lists of token ids for each source sentence.
             tgt_seq: list of the lists of token ids for each tgrget sentence.
         """
         
         src, tgt = [], []
-        for f in opt.figs:
+        for f in self.opt.figs:
             src_seq, tgt_seq = [], []
 
-            src_dir = 'data/{}/{}_{}.0'.format(opt.dataset, mode, f)
-            tgt_dir = 'data/{}/{}_{}.1'.format(opt.dataset, mode, f)
+            src_dir = 'data/{}/{}_{}.0'.format(self.opt.dataset, mode, f)
+            tgt_dir = 'data/{}/{}_{}.1'.format(self.opt.dataset, mode, f)
 
             with open(src_dir, 'r') as f1, open(tgt_dir, 'r') as f2:
                 f1 = f1.readlines()
@@ -88,7 +87,7 @@ class BartIterator(object):
                 else:
                     ups = 1
 
-                if self.task=='pr':
+                if self.task=='pt':
                     random.shuffle(src_seq)
                     tgt.extend(tgt_seq*ups)
                     tgt.extend(src_seq[:50000]*ups)
@@ -99,7 +98,7 @@ class BartIterator(object):
                     src.extend(tgt_seq[:50000]*ups)
                     tgt.extend(src_seq[:50000]*ups)
 
-        if self.task=='pre':
+        if self.task=='pt':
             return tgt, tgt.copy()
         else:
             return src, tgt
