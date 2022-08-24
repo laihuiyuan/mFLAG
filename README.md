@@ -26,7 +26,7 @@ python inference.py -src_form hyperbole -tgt_form idiom
 ```
 
 ### Models and Outputs
-- All model can found [here](https://drive.google.com/drive/folders/1s8Q_IBzmvcVlDp_Zaln3YX3npq_Vrsia?usp=sharing), and their corresponding outputs can be found in the `/data/outputs/` directory
+- All models can be found [here](https://drive.google.com/drive/folders/1s8Q_IBzmvcVlDp_Zaln3YX3npq_Vrsia?usp=sharing), and their corresponding outputs are in the `/data/outputs/` directory
 
 ## Citation
 ```
