@@ -38,27 +38,42 @@ def evaluate(model, valid_loader, tokenizer, step):
         for batch in valid_loader:
             src, tgt = map(lambda x: x.to(device), batch)
             mask = src.ne(tokenizer.pad_token_id).long()
-            src = word_mask(src, mask.sum(-1), 0.35, tokenizer.mask_token_id)
+            src = word_mask(
+                seq=src,
+                seq_len=mask.sum(-1),
+                mask_prob=0.35,
+                mask_id=tokenizer.mask_token_id)
             loss = model(src, attention_mask=mask, labels=tgt)[0]
             loss_list.append(loss.item())
         model.train()
-    print('[Info] valid {:05d} | loss {:.4f}'.format(step, np.mean(loss_list)))
+    avg_loss = np.mean(loss_list)
+    print('[Info] valid {:05d} | loss {:.4f}'.format(step, avg_loss))
 
-    return np.mean(loss_list)
+    return avg_loss
 
 
 def main():
-    parser = argparse.ArgumentParser('Figurative Language Pre-Training')
-    parser.add_argument('-seed', default=42, type=int, help='random seed')
-    parser.add_argument('-figs', nargs='+', help='figure tags', required=True)
-    parser.add_argument('-batch_size', default=32, type=int, help='batch size')
-    parser.add_argument('-patience', default=5, type=int, help='early stopping')
-    parser.add_argument('-dataset', default='para', type=str, help='dataset name')
-    parser.add_argument('-lr', default=1e-5, type=float, help='ini. learning rate')
-    parser.add_argument('-log_step', default=100, type=int, help='log every x step')
-    parser.add_argument('-acc_steps', default=8, type=int, help='accumulation_steps')
-    parser.add_argument('-epoch', default=30, type=int, help='force stop at x epoch')
-    parser.add_argument('-eval_step', default=1000, type=int, help='eval every x step')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-seed', default=42, type=int, help='random seed')
+    parser.add_argument(
+        '-figs', nargs='+', help='figure tags', required=True)
+    parser.add_argument(
+        '-batch_size', default=32, type=int, help='batch size')
+    parser.add_argument(
+        '-patience', default=5, type=int, help='early stopping')
+    parser.add_argument(
+        '-dataset', default='ParapFG', type=str, help='dataset name')
+    parser.add_argument(
+        '-lr', default=1e-5, type=float, help='ini. learning rate')
+    parser.add_argument(
+        '-log_step', default=100, type=int, help='log every x step')
+    parser.add_argument(
+        '-acc_steps', default=8, type=int, help='accumulation_steps')
+    parser.add_argument(
+        '-epoch', default=30, type=int, help='force stop at x epoch')
+    parser.add_argument(
+        '-eval_step', default=1000, type=int, help='eval every x step')
 
     opt = parser.parse_args()
     print('[Info]', opt)
@@ -68,6 +83,8 @@ def main():
     tokenizer.add_tokens('<literal>')
     for s in opt.figs:
         tokenizer.add_tokens('<{}>'.format(s))
+    tokenizer.save_pretrained('checkpoints/mFLAG')
+
     model = BartForConditionalGeneration.from_pretrained('facebook/bart-large')
     model.resize_token_embeddings(len(tokenizer))
     model = model.to(device).train()
@@ -116,7 +133,7 @@ def main():
                         and step % len(train_loader) == 0)):
                 eval_loss = evaluate(model, valid_loader, tokenizer, step)
                 if avg_loss >= eval_loss:
-                    torch.save(model.state_dict(), 'checkpoints/mFLAG-pt.chkpt')
+                    model.save_pretrained('checkpoints/mFLAG')
                     print('[Info] The checkpoint file has been updated.')
                     avg_loss = eval_loss
                     tab = 0
@@ -128,3 +145,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
