@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Most code for this implementation is borrowed from transformers
+"""
+Most code for this implementation is borrowed from transformers
+"""
 
 import math
 import random
@@ -13,7 +15,7 @@ from torch.nn import CrossEntropyLoss
 
 from transformers.utils import logging
 from transformers.models.bart.modeling_bart import  (
-    BartEncoderLayer, BartConfig, Seq2SeqLMOutput,
+    BartEncoderLayer, BartDecoderLayer, BartConfig, Seq2SeqLMOutput,
     BartEncoder, BartDecoder, _expand_mask, shift_tokens_right,
     BartLearnedPositionalEmbedding, Seq2SeqModelOutput)
 from transformers.modeling_outputs import (
@@ -24,7 +26,7 @@ from transformers import BartModel, BartForConditionalGeneration
 logger = logging.get_logger(__name__)
 
 
-class FigAttention(nn.Module):
+class FigurativeAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -103,7 +105,7 @@ class FigAttention(nn.Module):
         return attn_output
 
 
-class BartFigEncoder(BartEncoder):
+class MultiFigurativeEncoder(BartEncoder):
     """
     Transformer encoder consisting of *config.encoder_layers* self attention layers. Each layer is a
     [`BartEncoderLayer`].
@@ -134,7 +136,7 @@ class BartFigEncoder(BartEncoder):
             embed_dim,
         )
 
-        self.fig_attn = FigAttention(
+        self.fig_attn = FigurativeAttention(
             embed_dim=embed_dim,
             num_heads=config.encoder_attention_heads,
             dropout=config.attention_dropout,
@@ -296,15 +298,49 @@ class BartFigEncoder(BartEncoder):
         )
 
 
-class BartFigModel(BartModel):
+class MultiFigurativeDecoder(BartDecoder):
+    """
+    Transformer decoder consisting of *config.decoder_layers* layers. Each layer is a [`BartDecoderLayer`]
+
+    Args:
+        config: BartConfig
+        embed_tokens (nn.Embedding): output embedding
+    """
+
+    def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
+        super().__init__(config)
+        self.dropout = config.dropout
+        self.layerdrop = config.decoder_layerdrop
+        self.padding_idx = config.pad_token_id
+        self.max_target_positions = config.max_position_embeddings
+        self.embed_scale = math.sqrt(config.d_model) if config.scale_embedding else 1.0
+
+        if embed_tokens is not None:
+            self.embed_tokens = embed_tokens
+        else:
+            self.embed_tokens = nn.Embedding(config.vocab_size, config.d_model, self.padding_idx)
+
+        self.embed_positions = BartLearnedPositionalEmbedding(
+            config.max_position_embeddings,
+            config.d_model,
+        )
+        self.layers = nn.ModuleList([BartDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layernorm_embedding = nn.LayerNorm(config.d_model)
+
+        self.gradient_checkpointing = False
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+class MultiFigurativeModel(BartModel):
     def __init__(self, config: BartConfig):
         super().__init__(config)
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
         self.shared = nn.Embedding(vocab_size, config.d_model, padding_idx)
 
-        self.encoder = BartFigEncoder(config, self.shared)
-        self.decoder = BartDecoder(config, self.shared)
+        self.encoder = MultiFigurativeEncoder(config, self.shared)
+        self.decoder = MultiFigurativeDecoder(config, self.shared)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -400,13 +436,13 @@ class BartFigModel(BartModel):
         )
 
 
-class BartForFigGeneration(BartForConditionalGeneration):
+class MultiFigurativeGeneration(BartForConditionalGeneration):
     base_model_prefix = "model"
     _keys_to_ignore_on_load_missing = [r"final_logits_bias", r"lm_head\.weight"]
 
     def __init__(self, config: BartConfig):
         super().__init__(config)
-        self.model = BartFigModel(config)
+        self.model = MultiFigurativeModel(config)
         self.register_buffer("final_logits_bias", torch.zeros((1, self.model.shared.num_embeddings)))
         self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
