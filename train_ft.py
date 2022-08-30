@@ -11,9 +11,11 @@ from torch import cuda
 from transformers import logging
 from transformers import BartTokenizerFast
 
-from model import BartForFigGeneration
 from utils.dataset import BartIterator
 from utils.optim import ScheduledOptim
+
+from model import MultiFigurativeGeneration
+from tokenization_mflag import MFlagTokenizerFast
 
 logging.set_verbosity_error()
 device = 'cuda' if cuda.is_available() else 'cpu'
@@ -40,38 +42,49 @@ def evaluate(model, valid_loader, tokenizer, step):
         for batch in valid_loader:
             src, tgt = map(lambda x: x.to(device), batch)
             mask = src.ne(tokenizer.pad_token_id).long()
-            loss = model(src, attention_mask=mask, fig_ids=tgt[:, :1], labels=tgt)[0]
+            loss = model(
+                input_ids=src,
+                attention_mask=mask,
+                fig_ids=tgt[:, :1],
+                labels=tgt)[0]
             loss_list.append(loss.item())
         model.train()
-    print('[Info] valid {:05d} | loss {:.4f}'.format(step, np.mean(loss_list)))
+    avg_loss = np.mean(loss_list)
 
-    return np.mean(loss_list)
+    print('[Info] valid {:05d} | loss {:.4f}'.format(step, avg_loss))
+
+    return avg_loss
 
 
 def main():
-    parser = argparse.ArgumentParser('Figurative language generation')
-    parser.add_argument('-seed', default=42, type=int, help='random seed')
-    parser.add_argument('-figs', nargs='+', help='figure tags', required=True)
-    parser.add_argument('-batch_size', default=32, type=int, help='batch size')
-    parser.add_argument('-patience', default=5, type=int, help='early stopping')
-    parser.add_argument('-dataset', default='para', type=str, help='dataset name')
-    parser.add_argument('-lr', default=1e-5, type=float, help='ini. learning rate')
-    parser.add_argument('-log_step', default=100, type=int, help='log every x step')
-    parser.add_argument('-acc_steps', default=8, type=int, help='accumulation_steps')
-    parser.add_argument('-epoch', default=30, type=int, help='force stop at x epoch')
-    parser.add_argument('-eval_step', default=1000, type=int, help='eval every x step')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-seed', default=42, type=int, help='random seed')
+    parser.add_argument(
+        '-figs', nargs='+', help='figure tags', required=True)
+    parser.add_argument(
+        '-batch_size', default=32, type=int, help='batch size')
+    parser.add_argument(
+        '-patience', default=5, type=int, help='early stopping')
+    parser.add_argument(
+        '-dataset', default='ParapFG', type=str, help='dataset name')
+    parser.add_argument(
+        '-lr', default=1e-5, type=float, help='ini. learning rate')
+    parser.add_argument(
+        '-log_step', default=100, type=int, help='log every x step')
+    parser.add_argument(
+        '-acc_steps', default=8, type=int, help='accumulation_steps')
+    parser.add_argument(
+        '-epoch', default=30, type=int, help='force stop at x epoch')
+    parser.add_argument(
+        '-eval_step', default=1000, type=int, help='eval every x step')
 
     opt = parser.parse_args()
     print('[Info]', opt)
     torch.manual_seed(opt.seed)
 
-    tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-large')
-    tokenizer.add_tokens('<literal>')
-    for s in opt.figs:
-        tokenizer.add_tokens('<{}>'.format(s))
-    model = BartForFigGeneration.from_pretrained('facebook/bart-large')
-    model.resize_token_embeddings(len(tokenizer))
-    model.load_state_dict(torch.load('checkpoints/mFLAG-pt.chkpt'))
+    tokenizer = MFlagTokenizerFast.from_pretrained('checkpoints/mFLAG')
+    model = MultiFigurativeGeneration.from_pretrained('checkpoints/mFLAG')
     model = model.to(device).train()
 
     # load data for training
@@ -122,7 +135,7 @@ def main():
                         and step % len(train_loader) == 0)):
                 eval_loss = evaluate(model, valid_loader, tokenizer, step)
                 if avg_loss >= eval_loss:
-                    torch.save(model.state_dict(), 'checkpoints/mFLAG-ft.chkpt')
+                    model.save_pretrained('checkpoints/mFLAG')
                     print('[Info] The checkpoint file has been updated.')
                     avg_loss = eval_loss
                     tab = 0
