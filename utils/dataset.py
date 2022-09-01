@@ -7,7 +7,7 @@ import torch
 import torch.utils.data
 
 
-def word_mask(seq, seq_len, mask_prob=0.3, word_idx=0):
+def word_mask(seq, seq_len, mask_prob=0.3, mask_id=0):
     if mask_prob == 0:
         return seq
 
@@ -17,7 +17,7 @@ def word_mask(seq, seq_len, mask_prob=0.3, word_idx=0):
     drop_mask = (noise < mask_prob) & token_mask
     
     x = seq.clone()
-    x.masked_fill_(drop_mask, word_idx)
+    x.masked_fill_(drop_mask, mask_id)
 
     return x
 
