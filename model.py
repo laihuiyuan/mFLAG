@@ -14,7 +14,7 @@ from typing import Optional, Tuple
 from torch.nn import CrossEntropyLoss
 
 from transformers.utils import logging
-from transformers.models.bart.modeling_bart import  (
+from transformers.models.bart.modeling_bart import (
     BartEncoderLayer, BartDecoderLayer, BartConfig, Seq2SeqLMOutput,
     BartEncoder, BartDecoder, _expand_mask, shift_tokens_right,
     BartLearnedPositionalEmbedding, Seq2SeqModelOutput)
@@ -136,6 +136,7 @@ class MultiFigurativeEncoder(BartEncoder):
             embed_dim,
         )
 
+        # Figurative attention mechanism
         self.fig_attn = FigurativeAttention(
             embed_dim=embed_dim,
             num_heads=config.encoder_attention_heads,
@@ -229,12 +230,13 @@ class MultiFigurativeEncoder(BartEncoder):
         hidden_states = self.layernorm_embedding(hidden_states)
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
+        # Injecting target figurative information into encoder using cross-attention and residual learning
         if fig_ids is not None:
             residual = hidden_states
-            fg_embeds = self.embed_tokens(fig_ids) * self.embed_scale + embed_pos[:1,:]
+            fig_embeds = self.embed_tokens(fig_ids) * self.embed_scale + embed_pos[:1,:]
             hidden_states = self.fig_attn(
                 hidden_states=hidden_states,
-                key_value_states=fg_embeds,
+                key_value_states=fig_embeds,
             )
             hidden_states = residual + hidden_states
 
