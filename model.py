@@ -27,7 +27,10 @@ logger = logging.get_logger(__name__)
 
 
 class FigurativeAttention(nn.Module):
-    """Multi-headed attention from 'Attention Is All You Need' paper"""
+    """
+    Multi-figurative attention module, which is based on the
+    multi-headed attention from the 'Attention Is All You Need' paper.
+    """
 
     def __init__(
         self,
