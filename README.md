@@ -1,32 +1,52 @@
-# Multi-Figurative Language Generation (COLING 2022) 
+# [Multi-Figurative Language Generation (COLING 2022)](https://arxiv.org/abs/2209.01835)
 
 ## Overview
 
 ![](./figs/overview.png)
 
 ## Quick Start
-### Step 1: Pre-training
+### How to use
 ```bash
-python train_pt.py -dataset parap-fig -figs hyperbole idiom irony metaphor simile
+git clone git@github.com:laihuiyuan/mFLAG.git
+cd mFLAG
 ```
 
-### Step 2: Fine-tuning
+```python
+from model import MultiFigurativeGeneration
+from tokenization_mflag import MFlagTokenizerFast
+tokenizer = MFlagTokenizerFast.from_pretrained('laihuiyuan/mFLAG')
+model = MultiFigurativeGeneration.from_pretrained('laihuiyuan/mFLAG')
+# hyperbole to sarcasm
+inp_ids = tokenizer.encode("<hyperbole> I am not happy that he urged me to finish all the hardest tasks in the world", return_tensors="pt")
+fig_ids = tokenizer.encode("<sarcasm>", add_special_tokens=False, return_tensors="pt")
+outs = model.generate(input_ids=inp_ids[:, 1:], fig_ids=fig_ids, forced_bos_token_id=fig_ids.item(), num_beams=5, max_length=60,)
+text = tokenizer.decode(outs[0, 2:].tolist(), skip_special_tokens=True, clean_up_tokenization_spaces=False)
+```
+
+### Training
+
+#### Step 1: Pre-training
+```bash
+python train_pt.py -dataset ParapFG -figs hyperbole idiom metaphor sarcasm simile
+```
+
+#### Step 2: Fine-tuning
 ```bash
 # parallel paraphrase pretraining data
-python train_ft.py -dataset parap-fig -figs hyperbole idiom irony metaphor simile
+python train_ft.py -dataset ParapFG -figs hyperbole idiom metaphor sarcasm simile
 
 # literal-figurative parallel data
-python train_ft.py -dataset multi-fig -figs hyperbole idiom irony metaphor simile
+python train_ft.py -dataset MultiFG -figs hyperbole idiom metaphor sarcasm simile
 ```
 
-### Step 3: Figurative Generation
+#### Step 3: Figurative Generation
 ```bash
 # Generating idioms form hyperbolic text
 python inference.py -src_form hyperbole -tgt_form idiom
 ```
 
-### Models and Outputs
-- All models can be found [here](https://drive.google.com/drive/folders/1s8Q_IBzmvcVlDp_Zaln3YX3npq_Vrsia?usp=sharing), and their corresponding outputs are in the `/data/outputs/` directory
+#### Model and Outputs
+- Our model **mFLAG** can be found in [Hugging Face](https://huggingface.co/laihuiyuan/mFLAG), the corresponding outputs are in the `/data/outputs/` directory
 
 ## Citation
 ```
